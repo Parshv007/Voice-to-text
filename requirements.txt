@@ -1,0 +1,5 @@
+livekit-agents>=0.8.0
+livekit-plugins-deepgram
+livekit-plugins-rime
+livekit-plugins-silero
+python-dotenv
