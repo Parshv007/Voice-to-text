@@ -3,3 +3,4 @@ livekit-plugins-deepgram
 livekit-plugins-rime
 livekit-plugins-silero
 python-dotenv
+groq
