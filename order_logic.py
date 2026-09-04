@@ -12,8 +12,6 @@ import copy
 import json
 import os
 
-GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
-
 from groq import Groq
 
 try:
@@ -25,7 +23,7 @@ except ImportError:  # allows running this file directly, not just as a package
     from models import OrderItem, OrderState
     from prompts import build_system_prompt, build_user_message
 
-GROQ_MODEL = "openai/gpt-oss-120b"
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
 
 _client: Groq | None = None
 
