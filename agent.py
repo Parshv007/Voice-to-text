@@ -69,14 +69,7 @@ async def entrypoint(ctx: JobContext):
 
     session = AgentSession(
         vad=silero.VAD.load(),
-<<<<<<< HEAD
         stt=deepgram.STT(model="nova-3", language="multi"),
-=======
-        stt=deepgram.STT(
-            model="nova-2-general",
-            language="multi",
-        ),
->>>>>>> 9088586cfce860b1bd46f175087257bb87ade8a1
         tts=rime.TTS(
             model="coda",
             speaker="nadi",
