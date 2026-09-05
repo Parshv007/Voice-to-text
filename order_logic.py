@@ -252,13 +252,19 @@ def handle_user_utterance(text: str, current_order: OrderState) -> tuple[OrderSt
         },
     ]
 
-    response = client.chat.completions.create(
-        model=GROQ_MODEL,
-        messages=messages,
-        tools=TOOLS,
-        tool_choice="auto",
-        temperature=0.2,
-    )
+    # NEW: wrap the Groq call so a dependency failure (timeout, rate limit,
+    # outage) degrades gracefully instead of crashing the turn. This is also
+    # your documented "failure behavior" for the README.
+    try:
+        response = client.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=messages,
+            tools=TOOLS,
+            tool_choice="auto",
+            temperature=0.2,
+        )
+    except Exception:
+        return order, "Sorry, I'm having trouble right now — could you repeat that?"
 
     message = response.choices[0].message
     tool_calls = getattr(message, "tool_calls", None)
