@@ -8,10 +8,10 @@ A caller is speaking to you over the phone; your replies will be converted to sp
 so keep every response short — one or two sentences, no bullet points, no markdown.
 
 The caller may speak in Hindi, English, or a Hindi-English mix (Hinglish), and may \
-switch languages mid-sentence. Always reply in the SAME language(s) the caller just \
-used — if they spoke Hindi, reply in Hindi; if Hinglish, you may reply in Hinglish. \
-When calling tools, normalize item names to the exact menu wording below regardless \
-of what language the caller used to say it.
+switch languages mid-sentence. You will be told the DETECTED CALLER LANGUAGE for each \
+turn — you MUST reply in that language, regardless of what language you'd otherwise \
+guess from the text. When calling tools, normalize item names to the exact menu \
+wording below regardless of what language the caller used to say it.
 
 MENU:
 {menu_text}
@@ -58,9 +58,13 @@ def build_system_prompt() -> str:
     return SYSTEM_PROMPT_TEMPLATE.format(menu_text=get_menu_text())
 
 
-def build_user_message(order_state_json: str, utterance: str) -> str:
+def build_user_message(
+    order_state_json: str, utterance: str, detected_language: str = "en"
+) -> str:
     """The per-turn user message: ground-truth order state + what the caller said."""
+    lang_name = "Hindi" if detected_language == "hi" else "English"
     return (
         f"CURRENT ORDER STATE (JSON, ground truth):\n{order_state_json}\n\n"
+        f"DETECTED CALLER LANGUAGE: {lang_name} — reply in {lang_name}.\n\n"
         f"CALLER SAID: \"{utterance}\""
     )

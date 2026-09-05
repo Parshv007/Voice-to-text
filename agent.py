@@ -4,7 +4,7 @@ import logging
 
 from dotenv import load_dotenv
 
-from livekit.agents import Agent, AgentSession, AutoSubscribe, JobContext, WorkerOptions, cli
+from livekit.agents import Agent, AgentSession, AutoSubscribe, JobContext, WorkerOptions, cli, stt
 from livekit.plugins import deepgram, rime, silero
 
 try:
@@ -17,6 +17,13 @@ except ImportError:
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
 
+STT_TO_RIME_LANG = {
+    "en": "eng",
+    "hi": "hin",
+}
+
+STOP_WORDS = {"stop", "wait", "hold on", "ruko", "ruk", "ruk jao", "रुको"}
+
 
 class OrderingAgent(Agent):
     def __init__(self) -> None:
@@ -28,6 +35,20 @@ class OrderingAgent(Agent):
         self._current_turn_id: int | None = None
         self._current_task: asyncio.Task | None = None
         self._order_lock = asyncio.Lock()
+        self._current_language = "en"
+
+    async def stt_node(self, audio, model_settings=None):
+        async for event in Agent.default.stt_node(self, audio, model_settings):
+            if event.type == stt.SpeechEventType.FINAL_TRANSCRIPT:
+                detected = event.alternatives[0].language
+                if detected:
+                    detected = detected.split("-")[0]
+                    if detected != self._current_language and detected in STT_TO_RIME_LANG:
+                        self._current_language = detected
+                        await self.session.tts.update_options(
+                            lang=STT_TO_RIME_LANG[detected]
+                        )
+            yield event
 
     async def on_user_turn_completed(self, turn_ctx, new_message) -> None:
         text = new_message.text_content
@@ -37,6 +58,10 @@ class OrderingAgent(Agent):
         if self._current_task and not self._current_task.done():
             self._current_task.cancel()
             self.session.interrupt()
+
+        normalized = text.strip().lower()
+        if normalized in STOP_WORDS or any(w in normalized for w in STOP_WORDS):
+            return
 
         my_turn_id = next(self._turn_counter)
         self._current_turn_id = my_turn_id
@@ -48,7 +73,7 @@ class OrderingAgent(Agent):
         try:
             async with self._order_lock:
                 new_order, reply = await asyncio.to_thread(
-                    handle_user_utterance, text, self.order
+                    handle_user_utterance, text, self.order, self._current_language
                 )
                 if turn_id != self._current_turn_id:
                     return
@@ -73,7 +98,7 @@ async def entrypoint(ctx: JobContext):
         tts=rime.TTS(
             model="coda",
             speaker="nadi",
-            lang="hin",
+            lang="eng",
         ),
     )
 
@@ -83,7 +108,7 @@ async def entrypoint(ctx: JobContext):
     )
 
     await session.say(
-        "Hi, welcome! What can I get started for you today?",
+        "Hi! What would you like to order today?",
         allow_interruptions=True,
     )
 
