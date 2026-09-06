@@ -45,7 +45,7 @@ class OrderingAgent(Agent):
                     detected = detected.split("-")[0]
                     if detected != self._current_language and detected in STT_TO_RIME_LANG:
                         self._current_language = detected
-                        await self.session.tts.update_options(
+                        self.session.tts.update_options(
                             lang=STT_TO_RIME_LANG[detected]
                         )
             yield event
@@ -73,7 +73,7 @@ class OrderingAgent(Agent):
         try:
             async with self._order_lock:
                 new_order, reply = await asyncio.to_thread(
-                    handle_user_utterance, text, self.order, self._current_language
+                    handle_user_utterance, text, self.order
                 )
                 if turn_id != self._current_turn_id:
                     return
