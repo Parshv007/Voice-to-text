@@ -10,7 +10,10 @@ onto the OrderState and passing it back in on the next turn.
 
 import copy
 import json
+<<<<<<< HEAD
 import logging
+=======
+>>>>>>> 7043dd02d1037cb4fc85f75e666be62c8b33b06a
 import os
 
 from groq import Groq
@@ -48,6 +51,7 @@ TOOLS = [
         "function": {
             "name": "add_item",
             "description": (
+<<<<<<< HEAD
                 "Add one or more items to the order, or increase their quantity if "
                 "already in the order (e.g. 'add another fries'). If the caller names "
                 "several items in the same utterance (e.g. 'a cheeseburger and a large "
@@ -58,10 +62,17 @@ TOOLS = [
                 "include it as-is and the system will tell the caller if it isn't "
                 "available. Do NOT use this for corrections that replace a quantity — "
                 "use set_item_quantity for that."
+=======
+                "Add an item to the order, or increase its quantity if it's "
+                "already in the order (e.g. 'add another fries'). Do NOT use "
+                "this for corrections that replace a quantity — use "
+                "set_item_quantity for that."
+>>>>>>> 7043dd02d1037cb4fc85f75e666be62c8b33b06a
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
+<<<<<<< HEAD
                     "items": {
                         "type": "array",
                         "description": "One entry per distinct menu item the caller ordered.",
@@ -83,6 +94,19 @@ TOOLS = [
                     },
                 },
                 "required": ["items"],
+=======
+                    "item_name": {
+                        "type": "string",
+                        "description": "Menu item name, as close to the menu wording as possible.",
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "description": "Number of this item to add.",
+                        "minimum": 1,
+                    },
+                },
+                "required": ["item_name", "quantity"],
+>>>>>>> 7043dd02d1037cb4fc85f75e666be62c8b33b06a
             },
         },
     },
@@ -233,6 +257,7 @@ def _exec_add_item(order: OrderState, item_name: str, quantity: int, lang: str) 
     return _t(lang, "added", qty=quantity, item=menu_item["name"], total=new_qty)
 
 
+<<<<<<< HEAD
 def _exec_add_items(order: OrderState, items: list, lang: str) -> str:
     descriptions = []
     for entry in items:
@@ -246,6 +271,8 @@ def _exec_add_items(order: OrderState, items: list, lang: str) -> str:
             descriptions.append(desc)
     return " ".join(descriptions)
 
+=======
+>>>>>>> 7043dd02d1037cb4fc85f75e666be62c8b33b06a
 def _exec_set_item_quantity(order: OrderState, item_name: str, quantity: int, lang: str) -> str:
     menu_item = find_menu_item(item_name)
     if menu_item is None:
@@ -343,14 +370,23 @@ def handle_user_utterance(
             messages=messages,
             tools=TOOLS,
             tool_choice="auto",
+<<<<<<< HEAD
             parallel_tool_calls=True,
+=======
+>>>>>>> 7043dd02d1037cb4fc85f75e666be62c8b33b06a
             temperature=0.2,
         )
     except Exception:
         return order, _t(lang, "fallback")
+<<<<<<< HEAD
     message = response.choices[0].message
     tool_calls = getattr(message, "tool_calls", None)
     logging.debug("tool_calls: %s", tool_calls)   
+=======
+
+    message = response.choices[0].message
+    tool_calls = getattr(message, "tool_calls", None)
+>>>>>>> 7043dd02d1037cb4fc85f75e666be62c8b33b06a
 
     if not tool_calls:
         # No order change — plain-text reply (chit-chat, clarifying question).
@@ -368,7 +404,13 @@ def handle_user_utterance(
             args = {}
 
         if name == "add_item":
+<<<<<<< HEAD
             desc = _exec_add_items(order, args.get("items", []), lang)
+=======
+            desc = _exec_add_item(
+                order, args.get("item_name", ""), int(args.get("quantity", 1)), lang
+            )
+>>>>>>> 7043dd02d1037cb4fc85f75e666be62c8b33b06a
         elif name == "set_item_quantity":
             desc = _exec_set_item_quantity(
                 order, args.get("item_name", ""), int(args.get("quantity", 0)), lang

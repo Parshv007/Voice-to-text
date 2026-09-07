@@ -99,8 +99,11 @@ async def entrypoint(ctx: JobContext):
             model="coda",
             speaker="nadi",
             lang="eng",
+<<<<<<< HEAD
             reduce_latency=True,   # trims synthesis latency, helps avoid falling behind playback
             use_websocket=True,    # streams audio over a persistent connection instead of per-request HTTP
+=======
+>>>>>>> 7043dd02d1037cb4fc85f75e666be62c8b33b06a
         ),
     )
 
