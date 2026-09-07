@@ -140,6 +140,49 @@ TOOLS = [
 
 
 # ---------------------------------------------------------------------
+# Language-aware response templates
+# ---------------------------------------------------------------------
+
+TEMPLATES = {
+    "en": {
+        "not_on_menu": "Sorry, {item} isn't on our menu.",
+        "added": "Added {qty} {item}, now {total} total.",
+        "removed_all": "Removed {item} from your order.",
+        "set_qty": "Got it — {qty} {item}.",
+        "removed_partial": "Removed {qty} {item}, {left} left.",
+        "not_in_order": "You don't have {item} in your order.",
+        "menu_intro": "Here's what we've got: {menu}",
+        "total": "Your total so far is ${total:.2f}.",
+        "empty_order": "Your order is empty — add something before confirming.",
+        "confirmed": "Confirmed! Your total is ${total:.2f}. It'll be right up.",
+        "fallback": "Sorry, I'm having trouble right now — could you repeat that?",
+        "unclear": "Sorry, could you say that again?",
+        "default_ok": "Okay.",
+    },
+    "hi": {
+        "not_on_menu": "माफ़ कीजिए, {item} हमारे मेन्यू में नहीं है।",
+        "added": "{qty} {item} जोड़ दिए, अब कुल {total} हो गए।",
+        "removed_all": "{item} आपके ऑर्डर से हटा दिया गया।",
+        "set_qty": "ठीक है — {qty} {item}।",
+        "removed_partial": "{qty} {item} हटा दिए, अब {left} बचे हैं।",
+        "not_in_order": "आपके ऑर्डर में {item} है ही नहीं।",
+        "menu_intro": "हमारे पास ये है: {menu}",
+        "total": "आपका कुल अभी तक ${total:.2f} है।",
+        "empty_order": "आपका ऑर्डर खाली है — कन्फर्म करने से पहले कुछ जोड़ें।",
+        "confirmed": "कन्फर्म हो गया! आपका कुल ${total:.2f} है। जल्द ही तैयार होगा।",
+        "fallback": "माफ़ कीजिए, अभी थोड़ी दिक्कत हो रही है — क्या आप दोबारा बोल सकते हैं?",
+        "unclear": "माफ़ कीजिए, क्या आप दोबारा बोल सकते हैं?",
+        "default_ok": "ठीक है।",
+    },
+}
+
+
+def _t(lang: str, key: str, **kwargs) -> str:
+    lang = lang if lang in TEMPLATES else "en"
+    return TEMPLATES[lang][key].format(**kwargs)
+
+
+# ---------------------------------------------------------------------
 # Tool execution — pure functions over OrderState, no LLM involved.
 # Each returns a short human-readable description of what happened,
 # which is used to template the spoken response.
@@ -156,10 +199,10 @@ def _find_line(order: OrderState, item_name: str) -> OrderItem | None:
     return None
 
 
-def _exec_add_item(order: OrderState, item_name: str, quantity: int) -> str:
+def _exec_add_item(order: OrderState, item_name: str, quantity: int, lang: str) -> str:
     menu_item = find_menu_item(item_name)
     if menu_item is None:
-        return f"Sorry, {item_name} isn't on our menu."
+        return _t(lang, "not_on_menu", item=item_name)
 
     line = _find_line(order, menu_item["name"])
     if line:
@@ -170,20 +213,20 @@ def _exec_add_item(order: OrderState, item_name: str, quantity: int) -> str:
         )
     _recompute_total(order)
     new_qty = _find_line(order, menu_item["name"]).quantity
-    return f"Added {quantity} {menu_item['name']} (now {new_qty} total)."
+    return _t(lang, "added", qty=quantity, item=menu_item["name"], total=new_qty)
 
 
-def _exec_set_item_quantity(order: OrderState, item_name: str, quantity: int) -> str:
+def _exec_set_item_quantity(order: OrderState, item_name: str, quantity: int, lang: str) -> str:
     menu_item = find_menu_item(item_name)
     if menu_item is None:
-        return f"Sorry, {item_name} isn't on our menu."
+        return _t(lang, "not_on_menu", item=item_name)
 
     line = _find_line(order, menu_item["name"])
     if quantity <= 0:
         if line:
             order.items.remove(line)
         _recompute_total(order)
-        return f"Removed {menu_item['name']} from your order."
+        return _t(lang, "removed_all", item=menu_item["name"])
 
     if line:
         line.quantity = quantity
@@ -192,69 +235,78 @@ def _exec_set_item_quantity(order: OrderState, item_name: str, quantity: int) ->
             OrderItem(name=menu_item["name"], quantity=quantity, price=menu_item["price"])
         )
     _recompute_total(order)
-    return f"Got it — {quantity} {menu_item['name']}."
+    return _t(lang, "set_qty", qty=quantity, item=menu_item["name"])
 
 
-def _exec_remove_item(order: OrderState, item_name: str, quantity: int | None) -> str:
+def _exec_remove_item(order: OrderState, item_name: str, quantity: int | None, lang: str) -> str:
     menu_item = find_menu_item(item_name)
     if menu_item is None:
-        return f"Sorry, {item_name} isn't on our menu."
+        return _t(lang, "not_on_menu", item=item_name)
 
     line = _find_line(order, menu_item["name"])
     if not line:
-        return f"You don't have {menu_item['name']} in your order."
+        return _t(lang, "not_in_order", item=menu_item["name"])
 
     if quantity is None or quantity >= line.quantity:
         order.items.remove(line)
         _recompute_total(order)
-        return f"Removed {menu_item['name']} from your order."
+        return _t(lang, "removed_all", item=menu_item["name"])
 
     line.quantity -= quantity
     _recompute_total(order)
-    return f"Removed {quantity} {menu_item['name']} (now {line.quantity} left)."
+    return _t(lang, "removed_partial", qty=quantity, item=menu_item["name"], left=line.quantity)
 
 
-def _exec_get_menu() -> str:
-    return "Here's what we've got: " + get_menu_text().replace("\n", " ")
+def _exec_get_menu(lang: str) -> str:
+    return _t(lang, "menu_intro", menu=get_menu_text().replace("\n", " "))
 
 
-def _exec_get_total(order: OrderState) -> str:
-    return f"Your total so far is ${order.total:.2f}."
+def _exec_get_total(order: OrderState, lang: str) -> str:
+    return _t(lang, "total", total=order.total)
 
 
-def _exec_confirm_order(order: OrderState) -> str:
+def _exec_confirm_order(order: OrderState, lang: str) -> str:
     if not order.items:
-        return "Your order is empty — add something before confirming."
+        return _t(lang, "empty_order")
     order.status = "confirmed"
-    return f"Confirmed! Your total is ${order.total:.2f}. It'll be right up."
+    return _t(lang, "confirmed", total=order.total)
 
 
 # ---------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------
 
-def handle_user_utterance(text: str, current_order: OrderState) -> tuple[OrderState, str]:
+def handle_user_utterance(
+    text: str, current_order: OrderState, detected_language: str = "en"
+) -> tuple[OrderState, str]:
     """
     Interpret one caller utterance against the menu and current order,
     apply the resulting changes, and return (new_order_state, spoken_reply).
 
     Never mutates current_order in place — operates on a deep copy so the
     caller's reference stays untouched unless they take the returned value.
+
+    detected_language should be "en" or "hi" (falls back to "en" for
+    anything else); it is passed both to the LLM (so it replies/tool-calls
+    in the right language context) and used to pick the template language
+    for the deterministic tool-result strings below.
     """
     order = copy.deepcopy(current_order)
+    lang = detected_language if detected_language in TEMPLATES else "en"
     client = _get_client()
 
     messages = [
         {"role": "system", "content": build_system_prompt()},
         {
             "role": "user",
-            "content": build_user_message(json.dumps(order.to_dict()), text),
+            "content": build_user_message(
+                json.dumps(order.to_dict()), text, lang
+            ),
         },
     ]
 
-    # NEW: wrap the Groq call so a dependency failure (timeout, rate limit,
-    # outage) degrades gracefully instead of crashing the turn. This is also
-    # your documented "failure behavior" for the README.
+    # Wrap the Groq call so a dependency failure (timeout, rate limit,
+    # outage) degrades gracefully instead of crashing the turn.
     try:
         response = client.chat.completions.create(
             model=GROQ_MODEL,
@@ -264,14 +316,16 @@ def handle_user_utterance(text: str, current_order: OrderState) -> tuple[OrderSt
             temperature=0.2,
         )
     except Exception:
-        return order, "Sorry, I'm having trouble right now — could you repeat that?"
+        return order, _t(lang, "fallback")
 
     message = response.choices[0].message
     tool_calls = getattr(message, "tool_calls", None)
 
     if not tool_calls:
         # No order change — plain-text reply (chit-chat, clarifying question).
-        reply = (message.content or "Sorry, could you say that again?").strip()
+        # This comes straight from the model, which we've instructed (via
+        # build_user_message) to answer in the detected language already.
+        reply = (message.content or _t(lang, "unclear")).strip()
         return order, reply
 
     action_descriptions = []
@@ -283,25 +337,29 @@ def handle_user_utterance(text: str, current_order: OrderState) -> tuple[OrderSt
             args = {}
 
         if name == "add_item":
-            desc = _exec_add_item(order, args.get("item_name", ""), int(args.get("quantity", 1)))
+            desc = _exec_add_item(
+                order, args.get("item_name", ""), int(args.get("quantity", 1)), lang
+            )
         elif name == "set_item_quantity":
             desc = _exec_set_item_quantity(
-                order, args.get("item_name", ""), int(args.get("quantity", 0))
+                order, args.get("item_name", ""), int(args.get("quantity", 0)), lang
             )
         elif name == "remove_item":
             qty = args.get("quantity")
-            desc = _exec_remove_item(order, args.get("item_name", ""), int(qty) if qty is not None else None)
+            desc = _exec_remove_item(
+                order, args.get("item_name", ""), int(qty) if qty is not None else None, lang
+            )
         elif name == "get_menu":
-            desc = _exec_get_menu()
+            desc = _exec_get_menu(lang)
         elif name == "get_total":
-            desc = _exec_get_total(order)
+            desc = _exec_get_total(order, lang)
         elif name == "confirm_order":
-            desc = _exec_confirm_order(order)
+            desc = _exec_confirm_order(order, lang)
         else:
             desc = ""  # unknown tool name — ignore rather than crash the call
 
         if desc:
             action_descriptions.append(desc)
 
-    reply = " ".join(action_descriptions) if action_descriptions else "Okay."
+    reply = " ".join(action_descriptions) if action_descriptions else _t(lang, "default_ok")
     return order, reply
