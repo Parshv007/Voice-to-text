@@ -73,7 +73,7 @@ class OrderingAgent(Agent):
         try:
             async with self._order_lock:
                 new_order, reply = await asyncio.to_thread(
-                    handle_user_utterance, text, self.order
+                    handle_user_utterance, text, self.order, self._current_language
                 )
                 if turn_id != self._current_turn_id:
                     return
