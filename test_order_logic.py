@@ -30,6 +30,9 @@ TRANSCRIPT = [
     "Take off the fries.",
     "Also give me a chocolate milkshake.",
     "That's everything, go ahead and confirm it.",
+    "Can I get a cheeseburger, a fries, and a chocolate milkshake?",
+    "Add one more fries.",
+    "Can I get a cheeseburger and a pizza calzone?",
 ]
 
 

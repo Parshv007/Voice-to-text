@@ -81,10 +81,12 @@ class OrderingAgent(Agent):
 
             if turn_id != self._current_turn_id:
                 return
-            await self.session.say(reply, allow_interruptions=True)
+            try:
+                await self.session.say(reply, allow_interruptions=True)
+            except Exception:
+                logging.exception("TTS failed for lang=%s reply=%r", self._current_language, reply)
         except asyncio.CancelledError:
             return
-
 
 async def entrypoint(ctx: JobContext):
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
@@ -99,6 +101,8 @@ async def entrypoint(ctx: JobContext):
             model="coda",
             speaker="nadi",
             lang="eng",
+            reduce_latency=True,
+            use_websocket=True,
         ),
     )
 
@@ -106,6 +110,16 @@ async def entrypoint(ctx: JobContext):
         agent=OrderingAgent(),
         room=ctx.room,
     )
+
+    # Warm up the TTS connection with a throwaway synthesis so the real
+    # greeting isn't the first (slow, buffer-flushing) call to Rime.
+    try:
+        async for _ in session.tts.synthesize(" "):
+            pass
+    except Exception:
+        logging.exception("TTS warmup failed, continuing anyway")
+
+    await asyncio.sleep(0.3)
 
     await session.say(
         "Hi! What would you like to order today?",
