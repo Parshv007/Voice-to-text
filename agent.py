@@ -79,9 +79,12 @@ class OrderingAgent(Agent):
                     return
                 self.order = new_order
 
-            if turn_id != self._current_turn_id:
-                return
-            await self.session.say(reply, allow_interruptions=True)
+                if turn_id != self._current_turn_id:
+                    return
+                try:
+                    await self.session.say(reply, allow_interruptions=True)
+                except Exception:
+                    logging.exception("TTS failed for lang=%s reply=%r", self._current_language, reply)
         except asyncio.CancelledError:
             return
 
@@ -99,11 +102,6 @@ async def entrypoint(ctx: JobContext):
             model="coda",
             speaker="nadi",
             lang="eng",
-<<<<<<< HEAD
-            reduce_latency=True,   # trims synthesis latency, helps avoid falling behind playback
-            use_websocket=True,    # streams audio over a persistent connection instead of per-request HTTP
-=======
->>>>>>> 7043dd02d1037cb4fc85f75e666be62c8b33b06a
         ),
     )
 
@@ -111,6 +109,8 @@ async def entrypoint(ctx: JobContext):
         agent=OrderingAgent(),
         room=ctx.room,
     )
+
+    await asyncio.sleep(0.5)  # let STT/VAD/interruption warmup settle before first TTS call
 
     await session.say(
         "Hi! What would you like to order today?",
