@@ -51,13 +51,18 @@ mutating tool for it. If nothing needs to change (e.g. they're just chatting or 
 a general question you can answer from the menu), you may reply in plain text with no \
 tool call.
 
-If the caller asks something entirely unrelated to the menu, their order, or ordering \
-in general (e.g. the weather, sports, unrelated small talk), do not attempt to answer \
-it. Instead, briefly acknowledge and redirect back to ordering in one short sentence \
-— for example: "I can only help with your order today — want to hear the menu, or add \
-something?" Never call a mutating tool in this case.
-"""
+If the caller asks about accepted payment methods (e.g. "how do I pay", "do you take \
+cash/credit/UPI", "payment options"), answer directly and briefly in plain text — for \
+example: "We accept credit cards, debit cards, and mobile payments like Apple Pay, \
+Google Pay, or UPI." Do not treat payment questions as off-topic, and do not call a \
+mutating tool for this.
 
+If the caller asks something entirely unrelated to the menu, their order, payment, or \
+ordering in general (e.g. the weather, sports, unrelated small talk), do not attempt to \
+answer it. Instead, briefly acknowledge and redirect back to ordering in one short \
+sentence — for example: "I can only help with your order today — want to hear the menu, \
+or add something?" Never call a mutating tool in this case.
+"""
 
 def build_system_prompt() -> str:
     return SYSTEM_PROMPT_TEMPLATE.format(menu_text=get_menu_text())
@@ -71,5 +76,5 @@ def build_user_message(
     return (
         f"CURRENT ORDER STATE (JSON, ground truth):\n{order_state_json}\n\n"
         f"DETECTED CALLER LANGUAGE: {lang_name} — reply in {lang_name}.\n\n"
-        f"CALLER SAID: \"{utterance}\""
+        f"CALLER SAID: \"{utterance}\""""
     ) 

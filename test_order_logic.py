@@ -30,17 +30,12 @@ TRANSCRIPT = [
     "Take off the fries.",
     "Also give me a chocolate milkshake.",
     "That's everything, go ahead and confirm it.",
-<<<<<<< HEAD
     "Can I get a cheeseburger, a fries, and a chocolate milkshake?",
     "Add one more fries.",
     "Can I get a cheeseburger and a pizza calzone?",
 ]
 
-=======
-]
 
-
->>>>>>> 7043dd02d1037cb4fc85f75e666be62c8b33b06a
 def run():
     order = OrderState()
 

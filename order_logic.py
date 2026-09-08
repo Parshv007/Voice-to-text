@@ -221,6 +221,10 @@ def _exec_add_item(order: OrderState, item_name: str, quantity: int, lang: str) 
     if menu_item is None:
         return _t(lang, "not_on_menu", item=item_name)
 
+    if quantity <= 0:
+        # Defensive: schema says minimum 1, but don't trust the LLM blindly.
+        return ""
+
     line = _find_line(order, menu_item["name"])
     if line:
         line.quantity += quantity
@@ -236,10 +240,14 @@ def _exec_add_item(order: OrderState, item_name: str, quantity: int, lang: str) 
 def _exec_add_items(order: OrderState, items: list, lang: str) -> str:
     descriptions = []
     for entry in items:
+        try:
+            qty = int(entry.get("quantity", 1))
+        except (TypeError, ValueError):
+            qty = 1
         desc = _exec_add_item(
             order,
             entry.get("item_name", ""),
-            int(entry.get("quantity", 1)),
+            qty,
             lang,
         )
         if desc:
